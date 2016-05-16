@@ -71,19 +71,19 @@ public class Manifest {
                 if ((resource.getAttribute("d2l_2p0:material_type").equals("content")
                         || resource.getAttribute("d2l_2p0:material_type").equals("contentlink"))) //Do nothing
                 {
-                    if (resource.getAttribute("href").contains("http:\\")
-                            || resource.getAttribute("href").contains("https:\\")
-                            || resource.getAttribute("href").contains(".html")) {
-                        
-                    }
-                    else{
+                    if (resource.getAttribute("href").contains("http:")
+                            || resource.getAttribute("href").contains("https:")
+                            || resource.getAttribute("href").contains(".html")
+                            || resource.getAttribute("href").contains("/d2l/common/dialogs/quickLink/quickLink.d2l?ou={orgUnitId}")) {
+
+                    } else {
+                        // Now that we know everything that our files do NOT contain, we
+                        // can sort the ones that are probably problematic.  We will 
+                        // deal with HTML files later.
                         totalBroken++;
                         System.out.println("Resource identifier: " + resource.getAttribute("identifier"));
                     }
-                } // Now that we know everything that our files do NOT contain, we
-                // can sort the ones that are probably problematic.  We will 
-                // deal with HTML files later.
-                else {
+                } else {
 
                 }
 
