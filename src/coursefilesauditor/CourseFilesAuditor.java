@@ -16,7 +16,7 @@ public class CourseFilesAuditor {
      */
     public static void main(String[] args) {
 
-        Manifest manifest = new Manifest("C:\\Users\\HALLM8\\Downloads\\D2LExport_61929_201651642\\imsmanifest.xml");
+        Manifest manifest = new Manifest("C:\\Users\\Mark\\Downloads\\D2LExport_61929_201651824\\imsmanifest.xml");
 
         manifest.gatherCSV();
 

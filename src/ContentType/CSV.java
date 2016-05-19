@@ -11,11 +11,24 @@ package ContentType;
  */
 public class CSV {
     
-    String CSVLine = new String();
-    int numBroken = 0;
-    
+    String location;
+    int numBroken;
+
+    public CSV() {
+        location = new String();
+        numBroken = 0;
+    }
+
+    public CSV(String location) {
+        this.location = location;
+        numBroken = 0;
+    }
     
     public void gatherBroken(){
         
     }
+
+
+    
+    
 }

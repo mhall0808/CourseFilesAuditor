@@ -7,8 +7,8 @@ package coursefilesauditor;
 
 import ContentType.CSV;
 import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,6 +17,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
@@ -66,6 +67,8 @@ public class Manifest {
 
             // Well, that was all the easy stuff, unfortunately.  So here we go!
             NodeList resources = doc.getElementsByTagName("resource");
+            NodeList modules = doc.getElementsByTagName("item");
+
             for (int i = 0; i < resources.getLength(); i++) {
                 Element resource = (Element) resources.item(i);
                 if ((resource.getAttribute("d2l_2p0:material_type").equals("content")
@@ -73,8 +76,14 @@ public class Manifest {
                 {
                     if (resource.getAttribute("href").contains("http:")
                             || resource.getAttribute("href").contains("https:")
-                            || resource.getAttribute("href").contains(".html")
                             || resource.getAttribute("href").contains("/d2l/common/dialogs/quickLink/quickLink.d2l?ou={orgUnitId}")) {
+                    } /**
+                     * For this, we are going to just go ahead and parse all
+                     * html files listed. Narrowing this allows us to see each
+                     * HTML node, which we will then link to and use.
+                     */
+                    else if (resource.getAttribute("href").contains(".html") && !(resource.getAttribute("href").contains("http:")
+                            || resource.getAttribute("href").contains("https:"))) {
 
                     } else {
                         // Now that we know everything that our files do NOT contain, we
@@ -82,17 +91,45 @@ public class Manifest {
                         // deal with HTML files later.
                         totalBroken++;
                         System.out.println("Resource identifier: " + resource.getAttribute("identifier"));
+
+                        // This is super inefficient and I am trying to find a better
+                        // solution for it.  This will search each node for a matching
+                        // content page.
+                        for (int j = 0; j < modules.getLength(); j++) {
+                            Element module = (Element) modules.item(j);
+
+                            if (module.getAttribute("identifierref").equals(resource.getAttribute("identifier"))) {
+                                findModules(module.getParentNode());
+                            }
+                        }
                     }
-                } else {
+                } 
+                // Now, we just parse out quizzes.
+                else if (resource.getAttribute("d2l_2p0:material_type").equals("d2lquiz")) {
 
                 }
-
             }
 
             System.out.println(totalBroken);
         } catch (ParserConfigurationException | SAXException | IOException ex) {
             Logger.getLogger(Manifest.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    /**
+     * FIND MODULES This is a recursive function that cycles through modules
+     * until it reaches the root node. This is done to list the module location
+     * of the links used.
+     *
+     * @return
+     */
+    private String findModules(Node moduleNode) {
+        String moduleName = moduleNode.getTextContent();
+        System.out.println("module name: " + moduleNode.getChildNodes().item(1).getTextContent());
+        if (moduleNode.getParentNode().getNodeName().equals("")) {
+            String addTo = findModules(moduleNode.getParentNode());
+        }
+        return moduleName;
     }
 
     /**
