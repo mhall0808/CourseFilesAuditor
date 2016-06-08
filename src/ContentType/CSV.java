@@ -5,18 +5,22 @@
  */
 package ContentType;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author hallm8
  */
 public class CSV {
     
-    String location;
-    int numBroken;
+    protected String location;
+    protected int numBroken;
+    protected ArrayList<String> nameAndLocation;
 
     public CSV() {
         location = new String();
         numBroken = 0;
+        nameAndLocation = new ArrayList<>();
     }
 
     public CSV(String location) {
@@ -24,11 +28,42 @@ public class CSV {
         numBroken = 0;
     }
     
+    /**
+     * Gather Broken:
+     *   This gathers broken links.  As a single function that works cross-class,
+     * it allows the program to not have to differentiate between one and the
+     * other, because that will happen at a different level.
+     * 
+     * This allows for more densely packed code, and being able to do things 
+     * hopefully more efficiently.
+     */
     public void gatherBroken(){
         
+    } 
+
+    public String getLocation() {
+        return location;
     }
 
+    public void setLocation(String location) {
+        this.location = location;
+    }
 
+    public int getNumBroken() {
+        return numBroken;
+    }
+
+    public void setNumBroken(int numBroken) {
+        this.numBroken = numBroken;
+    }
+
+    public ArrayList<String> getNameAndLocation() {
+        return nameAndLocation;
+    }
+
+    public void setNameAndLocation(ArrayList<String> nameAndLocation) {
+        this.nameAndLocation = nameAndLocation;
+    }
     
     
 }

@@ -6,6 +6,8 @@
 package coursefilesauditor;
 
 import ContentType.CSV;
+import ContentType.Content;
+import ContentType.HTMLPages;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -27,22 +29,31 @@ import org.xml.sax.SAXException;
  */
 public class Manifest {
 
-    String CSVFile = new String();
-    String CSVName = new String();
-    String manifestLocation = new String();
-    ArrayList<CSV> CSVList = new ArrayList<>();
-    ArrayList<String> HTMLLinks = new ArrayList<>();
+    String className = new String();
     String OrgUnitID = new String();
+    String manifestLocation = new String();
     int totalBroken = 0;
-
+    
+    ArrayList<CSV> CSVList = new ArrayList<>();
+    
+    /**
+     * 
+     */
     public Manifest() {
 
     }
 
+    /**
+     * 
+     * @param newLocation 
+     */
     public Manifest(String newLocation) {
         manifestLocation = newLocation;
     }
 
+    /**
+     * 
+     */
     public void gatherCSV() {
         // First, we have to crack open the DOM parser and pull out some info.
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -50,7 +61,7 @@ public class Manifest {
 
         try {
             dBuilder = dbFactory.newDocumentBuilder();
-            Document doc = dBuilder.parse(manifestLocation);
+            Document doc = dBuilder.parse(manifestLocation + "\\imsmanifest.xml");
 
             // Normalize the document.  
             doc.getDocumentElement().normalize();
@@ -60,56 +71,59 @@ public class Manifest {
             OrgUnitID = root.getAttribute("identifier").replace("D2L_", "");
             System.out.println("OU Found! : " + OrgUnitID);
 
-            // We have the OUID, so now we can link to the website.
-            CSVFile += "https://byui.brightspace.com/d2l/home/" + OrgUnitID + "\n";
-            // Now we have enough to make line 2 as well.
-            CSVFile += "'Module', 'Content Page Name'\n";
-
             // Well, that was all the easy stuff, unfortunately.  So here we go!
             NodeList resources = doc.getElementsByTagName("resource");
             NodeList modules = doc.getElementsByTagName("item");
 
+            
             for (int i = 0; i < resources.getLength(); i++) {
                 Element resource = (Element) resources.item(i);
-                if ((resource.getAttribute("d2l_2p0:material_type").equals("content")
-                        || resource.getAttribute("d2l_2p0:material_type").equals("contentlink"))) //Do nothing
-                {
-                    if (resource.getAttribute("href").contains("http:")
-                            || resource.getAttribute("href").contains("https:")
-                            || resource.getAttribute("href").contains("/d2l/common/dialogs/quickLink/quickLink.d2l?ou={orgUnitId}")) {
-                    } /**
-                     * For this, we are going to just go ahead and parse all
-                     * html files listed. Narrowing this allows us to see each
-                     * HTML node, which we will then link to and use.
-                     */
-                    else if (resource.getAttribute("href").contains(".html") && !(resource.getAttribute("href").contains("http:")
-                            || resource.getAttribute("href").contains("https:"))) {
-
-                    } else {
-                        // Now that we know everything that our files do NOT contain, we
-                        // can sort the ones that are probably problematic.  We will 
-                        // deal with HTML files later.
-                        totalBroken++;
-                        System.out.println("Resource identifier: " + resource.getAttribute("identifier"));
-
-                        // This is super inefficient and I am trying to find a better
-                        // solution for it.  This will search each node for a matching
-                        // content page.
-                        for (int j = 0; j < modules.getLength(); j++) {
-                            Element module = (Element) modules.item(j);
-
-                            if (module.getAttribute("identifierref").equals(resource.getAttribute("identifier"))) {
-                                findModules(module.getParentNode());
-                            }
-                        }
-                    }
-                } 
-                // Now, we just parse out quizzes.
-                else if (resource.getAttribute("d2l_2p0:material_type").equals("d2lquiz")) {
-
+                switch (resource.getAttribute("d2l_2p0:material_type")) {
+                    case "content":
+                    case "contentlink":
+                        if (resource.getAttribute("href").contains("http:")
+                                || resource.getAttribute("href").contains("https:")
+                                || resource.getAttribute("href").contains("/d2l/common/dialogs/quickLink/quickLink.d2l?ou={orgUnitId}")) {
+                        } /**
+                         * For this, we are going to just go ahead and parse all
+                         * html files listed. Narrowing this allows us to see each
+                         * HTML node, which we will then link to and use.
+                         */
+                        else if (resource.getAttribute("href").contains(".html")) {
+                            HTMLPages html = new HTMLPages(manifestLocation + 
+                                    resource.getAttribute("href"));
+                            Element module = (Element) modules.item(i);
+                            ArrayList<String> nNameAndLocation = new ArrayList<>();
+                            nNameAndLocation.add(module.getTextContent());
+                            nNameAndLocation = findModules(module, nNameAndLocation);
+                            html.setNameAndLocation(nNameAndLocation);
+                            CSVList.add(html);
+                            
+                        } else {
+                            // Now that we know everything that our files do NOT contain, we
+                            // can sort the ones that are probably problematic.  We will
+                            // deal with HTML files later.
+                            totalBroken++;
+                            System.out.println("Resource identifier: " + resource.getAttribute("identifier"));
+                            Content content = new Content();
+                            Element module = (Element) modules.item(i);
+                            ArrayList<String> nNameAndLocation = new ArrayList<>();
+                            nNameAndLocation.add(module.getTextContent());
+                            nNameAndLocation = findModules(module, nNameAndLocation);
+                            content.setNameAndLocation(nNameAndLocation);
+                            CSVList.add(content);
+                        }   break;
+                    case "d2lquiz":
+                        break;
                 }
             }
-
+            
+            for (CSV brokenList : CSVList) {
+                brokenList.gatherBroken();
+                totalBroken += brokenList.getNumBroken();
+            }
+            
+            
             System.out.println(totalBroken);
         } catch (ParserConfigurationException | SAXException | IOException ex) {
             Logger.getLogger(Manifest.class.getName()).log(Level.SEVERE, null, ex);
@@ -123,23 +137,12 @@ public class Manifest {
      *
      * @return
      */
-    private String findModules(Node moduleNode) {
-        String moduleName = moduleNode.getTextContent();
+    private ArrayList<String> findModules(Node moduleNode, ArrayList<String> newList) {
+        newList.add(moduleNode.getTextContent());
         System.out.println("module name: " + moduleNode.getChildNodes().item(1).getTextContent());
         if (moduleNode.getParentNode().getNodeName().equals("")) {
-            String addTo = findModules(moduleNode.getParentNode());
+            newList = findModules(moduleNode.getParentNode(), newList);
         }
-        return moduleName;
-    }
-
-    /**
-     *
-     */
-    public void writeCSV() {
-        try (PrintWriter out = new PrintWriter(CSVName + ".csv")) {
-            out.println(CSVFile);
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(Manifest.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        return newList;
     }
 }

@@ -58,6 +58,8 @@ public class HTMLPages extends CSV {
         } else {
             System.out.println("Tried to clean HTML and doesn't exist!!");
         }
-
+        if (numBroken > 0){
+         // Push to FireBase   
+        }
     }
 }
